@@ -22,11 +22,10 @@
 
 #pragma once
 
-#include "stdint.h"
+#include <stdint.h>
 #include <memory>
-// really simple ecs mostly just write out some idea. I don't suggest using it as is but
-// I hope it gives you some ideas; probably has bugs though and you'll probably want
-// to use smart pointers
+// really simple ecs mostly just brainstorming ideas. I don't suggest using it as is but
+// I hope it gives you some ideas; probably has bugs.
 namespace nameless::ecs {
     // make this larger if you need a larger max size
     using Int = uint16_t;
@@ -52,12 +51,19 @@ namespace nameless::ecs {
         Int entity_size;
     };
 
+    struct MemoryBlock {
+        std::unique_ptr<uint8_t[]> ptr;
+        size_t                     size;
+        size_t                     capacity;
+
+        inline MemoryBlock(const size_t capacity) :
+            ptr(std::make_unique(capacity)),
+            size(0),
+            capacity(capacity) {}
+    }
+
     struct Chunk {
-        struct {
-            uint8_t* ptr;
-            size_t   size;
-        } buffer;
-        
+        MemoryBlock                buffer;
         std::shared_ptr<Archetype> archetype;
         size_t                     entity_count;
     };
@@ -87,7 +93,7 @@ namespace nameless::ecs {
     }
 
     template<typename T>
-    auto get_component(Chunk& chunk) {
+    auto get_component(Chunk &chunk) {
         for(Int i = 0; i < chunk.archetype->component_count; i++) {
             if(archetype.type_ids[i] == TypeId::get<T>) {
                 return reinterpret_cast<T*>(chunk.buffer.ptr + chunk.archetype->type_ptr_offsets[i]);
@@ -97,7 +103,7 @@ namespace nameless::ecs {
     }
 
     template<typename Action, typename... T>
-    void for_each(Chunk& chunk, Action action) {
+    void for_each(Chunk &chunk, Action action) {
         for(Int i = 0; i < chunk.archetype->component_count; i++) {
             action(get_component<T>(chunk)...);
         }        
